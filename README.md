@@ -4,6 +4,8 @@ Podrobný český návod, jak **stáhnout a zapsat Raspberry Pi OS na novou micr
 
 Tento postup byl prakticky proveden při obnově systému dne **25. 9. 2026**. Funkční Raspberry Pi běželo ze své původní microSD karty a druhá 16GB microSD byla vložena přes USB čtečku.
 
+Návod je záměrně psaný **pro úplného začátečníka**. Příkazy jsou uváděny celé a po důležitých krocích následuje kontrola s očekávaným výsledkem. Není potřeba předem znát Linux.
+
 > [!CAUTION]
 > Příkaz `dd` přepisuje zadané zařízení bez dalšího potvrzení. Nejdůležitější část celého návodu je správně určit, která jednotka je systémová karta a která je nová karta v USB čtečce. **Nikdy nekopíruj `/dev/sda` z tohoto návodu naslepo. Nejdřív vždy proveď kontrolu pomocí `lsblk`.**
 
@@ -349,7 +351,57 @@ Tento repozitář se soustředí především na bezpečné stažení, ověřen�
 
 ---
 
-# 12. Vlastní hostname, SSH a Wi-Fi SSID
+# 12. Aktualizace systému a základní nástroje
+
+Po prvním úspěšném bootu a připojení k internetu nejdříve aktualizuj systém:
+
+```bash
+sudo apt update
+sudo apt full-upgrade -y
+sudo apt autoremove -y
+```
+
+`apt update` obnoví seznam dostupných balíčků. `full-upgrade` nainstaluje aktualizace včetně změn závislostí a `autoremove` odstraní již nepotřebné automaticky instalované balíčky.
+
+Ověř, zda ještě něco čeká na aktualizaci:
+
+```bash
+apt list --upgradable
+```
+
+Pokud je systém aktuální, pod hlavičkou `Listing... Done` nebude seznam balíčků čekajících na upgrade.
+
+Potom nainstaluj základní nástroje používané v tomto návodu:
+
+```bash
+sudo apt install -y git wget xz-utils ca-certificates
+```
+
+Ověř je:
+
+```bash
+git --version
+wget --version | head -n 1
+xz --version | head -n 1
+```
+
+U Git musíš dostat například:
+
+```text
+git version 2.x.x
+```
+
+Konkrétní číslo verze se může lišit. Důležité je, že příkaz neskončí `command not found`.
+
+Po větší systémové aktualizaci je vhodné Raspberry restartovat:
+
+```bash
+sudo reboot
+```
+
+---
+
+# 13. Vlastní hostname, SSH a Wi-Fi SSID
 
 Pokud připravuješ kartu **bez Raspberry Pi Imageru** a po prvním bootu potřebuješ nastavit vlastní název Raspberry Pi, SSH a Wi-Fi, níže jsou přesné cesty k souborům používaným na testovaném Raspberry Pi OS Trixie.
 
@@ -499,6 +551,18 @@ musí obsahovat:
 Active: active (running)
 ```
 
+Skutečně použitou hodnotu pro přihlášení heslem ověříš:
+
+```bash
+sudo sshd -T | grep -i '^passwordauthentication'
+```
+
+Pokud je přihlášení heslem povolené, očekávej:
+
+```text
+passwordauthentication yes
+```
+
 ## Wi-Fi – SSID a heslo
 
 Na testovaném Raspberry Pi OS Trixie spravuje síť **NetworkManager**.
@@ -534,6 +598,44 @@ Aktivní Wi-Fi profil zjistíš:
 ```bash
 nmcli -t -f NAME,DEVICE connection show --active
 ```
+
+### Kontrola SSID a skutečně uloženého Wi-Fi hesla
+
+Protože je tento návod určen i začátečníkům, můžeš si při diagnostice nechat zobrazit **skutečně uložené heslo**, abys přesně viděl, zda jsi jej zadal správně.
+
+Nejdříve zjisti jméno profilu:
+
+```bash
+nmcli connection show
+```
+
+Potom zobraz SSID a heslo:
+
+```bash
+sudo nmcli --show-secrets -g 802-11-wireless.ssid,802-11-wireless-security.psk connection show "JMENO_PROFILU"
+```
+
+Například:
+
+```bash
+sudo nmcli --show-secrets -g 802-11-wireless.ssid,802-11-wireless-security.psk connection show "Internet-Doma"
+```
+
+Očekávaný tvar výstupu:
+
+```text
+MOJE_SSID
+MOJE_WIFI_HESLO
+```
+
+První řádek je SSID, druhý skutečně uložené heslo. Celý profil včetně tajných údajů lze zobrazit:
+
+```bash
+sudo nmcli --show-secrets connection show "JMENO_PROFILU"
+```
+
+> [!WARNING]
+> Tento výstup může obsahovat tvoje skutečné Wi-Fi heslo. Pro vlastní kontrolu je to užitečné, ale **nevkládej takový výstup ani screenshot veřejně na GitHub, fórum nebo do issue bez odstranění hesla**.
 
 NetworkManager po úspěšném vytvoření profilu uloží konfiguraci do:
 
@@ -595,7 +697,7 @@ Očekáváme:
 
 ---
 
-# 13. Nejčastější chyby
+# 14. Nejčastější chyby
 
 ### `No space left on device` při stahování do `/tmp`
 
