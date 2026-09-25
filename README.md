@@ -697,7 +697,149 @@ Očekáváme:
 
 ---
 
-# 14. Nejčastější chyby
+# 14. Připojení k Raspberry Pi z telefonu přes Termius
+
+Pro práci bez počítače lze použít telefon a SSH klient **Termius**. Termius je dostupný pro Android i iPhone/iPad a umožňuje otevřít terminál Raspberry Pi přímo v telefonu.
+
+Oficiální odkazy:
+
+- Android – Termius: https://termius.com/download/android
+- Android – Google Play: https://play.google.com/store/apps/details?id=com.server.auditor.ssh.client
+- iPhone/iPad – Termius: https://termius.com/download/ios
+- iPhone/iPad – App Store: https://apps.apple.com/app/termius-modern-ssh-client/id549039908
+
+## Nejdříve připrav Raspberry Pi
+
+Na Raspberry musí být SSH zapnuté:
+
+```bash
+sudo systemctl enable --now ssh
+```
+
+Ověř:
+
+```bash
+systemctl is-enabled ssh
+systemctl is-active ssh
+```
+
+Správný výstup:
+
+```text
+enabled
+active
+```
+
+Zjisti IP adresu Raspberry Pi:
+
+```bash
+hostname -I
+```
+
+Příklad:
+
+```text
+192.168.1.123
+```
+
+Pokud se zobrazí více adres, Wi-Fi adresu lze zobrazit přes:
+
+```bash
+ip -4 addr show wlan0
+```
+
+Hledej řádek začínající `inet`, například:
+
+```text
+inet 192.168.1.123/24 ...
+```
+
+Pro Termius použiješ pouze IP adresu před lomítkem:
+
+```text
+192.168.1.123
+```
+
+Telefon a Raspberry Pi musí být pro tento jednoduchý lokální postup ve stejné síti – například na stejné domácí Wi-Fi nebo hotspotu.
+
+## Nastavení v Termius
+
+Po instalaci Termius vytvoř nový **Host** a vyplň:
+
+```text
+Label:    libovolný název, například Raspberry
+Address:  IP adresa Raspberry, například 192.168.1.123
+Port:     22
+Username: pi
+Password: heslo uživatele pi
+```
+
+Pokud jsi při instalaci použil jiného uživatele než `pi`, zadej samozřejmě jeho jméno.
+
+Host ulož a otevři.
+
+Při úplně prvním připojení se může zobrazit dotaz na důvěryhodnost SSH host key/fingerprintu. Pokud jde skutečně o tvoje Raspberry na právě zjištěné IP adrese, potvrď připojení.
+
+Potom Termius požádá o přihlášení, pokud jsi heslo neuložil už v nastavení hostu.
+
+## Jak poznám, že jsem opravdu připojený
+
+Po úspěšném přihlášení se zobrazí linuxový terminál. Prompt může vypadat například:
+
+```text
+pi@raspberrypi:~ $
+```
+
+Ověř identitu Raspberry:
+
+```bash
+whoami
+hostname
+hostname -I
+```
+
+Příklad správného výsledku:
+
+```text
+pi
+raspberrypi
+192.168.1.123
+```
+
+Od této chvíle můžeš příkazy z tohoto README kopírovat do Termius stejně, jako kdybys seděl u Raspberry s klávesnicí a monitorem.
+
+## Když Termius hlásí, že se nemůže připojit
+
+Na Raspberry nejdříve zkontroluj:
+
+```bash
+systemctl is-active ssh
+hostname -I
+```
+
+SSH musí vrátit:
+
+```text
+active
+```
+
+Dále zkontroluj v Termius:
+
+```text
+Address  = aktuální IP Raspberry
+Port     = 22
+Username = správný uživatel
+Password = správné heslo
+```
+
+Pokud telefon používá mobilní data a Raspberry je na domácí Wi-Fi, obyčejná lokální IP typu `192.168.x.x` nebo `10.x.x.x` obvykle nestačí. Pro tento základní návod měj telefon i Raspberry ve stejné lokální síti.
+
+> [!NOTE]
+> Tato část je zatím základní ověřený postup. Později ji můžeme rozšířit o přesný postup podle reálného nastavení v mobilní aplikaci Termius, screenshoty a případně připojení přes hotspot nebo Tailscale.
+
+---
+
+# 15. Nejčastější chyby
 
 ### `No space left on device` při stahování do `/tmp`
 
