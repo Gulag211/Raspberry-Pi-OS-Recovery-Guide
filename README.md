@@ -349,7 +349,253 @@ Tento repozitář se soustředí především na bezpečné stažení, ověřen�
 
 ---
 
-# 12. Nejčastější chyby
+# 12. Vlastní hostname, SSH a Wi-Fi SSID
+
+Pokud připravuješ kartu **bez Raspberry Pi Imageru** a po prvním bootu potřebuješ nastavit vlastní název Raspberry Pi, SSH a Wi-Fi, níže jsou přesné cesty k souborům používaným na testovaném Raspberry Pi OS Trixie.
+
+> [!IMPORTANT]
+> Při našem testu se ukázalo, že ručně připravený cloud-init nebyl pro první boot spolehlivý. Následující část proto popisuje především **kde je nastavení po nabootování systému** a jak jej nastavit přímo v běžícím Raspberry Pi.
+
+## Hostname
+
+Aktuální hostname zobrazíš:
+
+```bash
+hostname
+hostnamectl
+```
+
+Hlavní soubor s názvem zařízení je:
+
+```text
+/etc/hostname
+```
+
+Název se používá také v:
+
+```text
+/etc/hosts
+```
+
+Nejjednodušší změna hostname je:
+
+```bash
+sudo hostnamectl set-hostname MOJE-RASPBERRY
+```
+
+Potom zkontroluj:
+
+```bash
+cat /etc/hostname
+hostnamectl
+```
+
+Pokud má `/etc/hosts` řádek se starým hostname, uprav jej:
+
+```bash
+sudo nano /etc/hosts
+```
+
+Typicky například:
+
+```text
+127.0.1.1       MOJE-RASPBERRY
+```
+
+Po restartu:
+
+```bash
+sudo reboot
+```
+
+ověř:
+
+```bash
+hostname
+```
+
+Výstup musí být nový název zařízení.
+
+## SSH
+
+Systemd služba SSH je:
+
+```text
+ssh.service
+```
+
+SSH zapneš a současně spustíš:
+
+```bash
+sudo systemctl enable --now ssh
+```
+
+Kontrola:
+
+```bash
+systemctl is-enabled ssh
+systemctl is-active ssh
+```
+
+Správný výsledek je:
+
+```text
+enabled
+active
+```
+
+Hlavní konfigurace OpenSSH serveru je:
+
+```text
+/etc/ssh/sshd_config
+```
+
+Doplňkové konfigurační soubory jsou v:
+
+```text
+/etc/ssh/sshd_config.d/
+```
+
+Při našem recovery testu jsme pro explicitní povolení přihlášení heslem použili například:
+
+```text
+/etc/ssh/sshd_config.d/99-kotel-test.conf
+```
+
+s obsahem:
+
+```text
+PasswordAuthentication yes
+```
+
+Po změně SSH konfigurace nejprve ověř syntaxi:
+
+```bash
+sudo sshd -t
+echo $?
+```
+
+Správný výsledek je:
+
+```text
+0
+```
+
+A potom:
+
+```bash
+sudo systemctl restart ssh
+```
+
+Stav:
+
+```bash
+systemctl status ssh --no-pager
+```
+
+musí obsahovat:
+
+```text
+Active: active (running)
+```
+
+## Wi-Fi – SSID a heslo
+
+Na testovaném Raspberry Pi OS Trixie spravuje síť **NetworkManager**.
+
+Uložené profily jsou v:
+
+```text
+/etc/NetworkManager/system-connections/
+```
+
+Nejdříve zobraz dostupné Wi-Fi sítě:
+
+```bash
+nmcli device wifi list
+```
+
+Nejjednodušší připojení k vlastnímu SSID:
+
+```bash
+sudo nmcli device wifi connect "MOJE_SSID" password "MOJE_WIFI_HESLO"
+```
+
+Potom ověř:
+
+```bash
+nmcli connection show
+nmcli device status
+ip addr show wlan0
+```
+
+Aktivní Wi-Fi profil zjistíš:
+
+```bash
+nmcli -t -f NAME,DEVICE connection show --active
+```
+
+NetworkManager po úspěšném vytvoření profilu uloží konfiguraci do:
+
+```text
+/etc/NetworkManager/system-connections/
+```
+
+Soubory v tomto adresáři obsahují citlivé údaje a mají být chráněné oprávněním `600` a vlastníkem `root:root`.
+
+Seznam lze bezpečně zobrazit:
+
+```bash
+sudo ls -l /etc/NetworkManager/system-connections/
+```
+
+### Změna SSID u existujícího profilu
+
+Nejdříve zjisti jméno profilu:
+
+```bash
+nmcli connection show
+```
+
+Potom lze změnit SSID a heslo přes NetworkManager:
+
+```bash
+sudo nmcli connection modify "JMENO_PROFILU" 802-11-wireless.ssid "NOVE_SSID"
+sudo nmcli connection modify "JMENO_PROFILU" wifi-sec.psk "NOVE_WIFI_HESLO"
+sudo nmcli connection up "JMENO_PROFILU"
+```
+
+Pokud pracuješ vzdáleně přes právě měněnou Wi-Fi, poslední příkaz může okamžitě přerušit SSH spojení. Potom se musíš připojit na novou IP adresu v nové síti.
+
+### Kontrola po restartu
+
+Po nastavení hostname, SSH a Wi-Fi je vhodné provést:
+
+```bash
+sudo reboot
+```
+
+Po naběhnutí ověř:
+
+```bash
+hostname
+systemctl is-enabled ssh
+systemctl is-active ssh
+nmcli -t -f NAME,DEVICE connection show --active
+ip -4 addr show wlan0
+```
+
+Očekáváme:
+
+- správný vlastní hostname,
+- SSH `enabled`,
+- SSH `active`,
+- aktivní Wi-Fi profil na `wlan0`,
+- IPv4 adresu přidělenou Wi-Fi síti.
+
+---
+
+# 13. Nejčastější chyby
 
 ### `No space left on device` při stahování do `/tmp`
 
